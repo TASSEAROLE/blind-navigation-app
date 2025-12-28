@@ -1,0 +1,40 @@
+name: blind_navigation
+description: Application de navigation vocale pour aveugles
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # HTTP requests
+  http: ^1.1.0
+  
+  # GPS location
+  geolocator: ^10.1.0
+  
+  # Text-to-Speech (vocal)
+  flutter_tts: ^4.0.2
+  
+  # Audio recording
+  record: 5.0.4
+  
+  path_provider: ^2.1.1
+  
+  # Permissions
+  permission_handler: ^11.0.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+# ✅ FIX RÉEL ICI (version COMPATIBLE)
+dependency_overrides:
+  record_platform_interface: 1.2.0
+
+flutter:
+  uses-material-design: true
