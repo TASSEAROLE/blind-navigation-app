@@ -7,6 +7,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 import 'services/api_service.dart';
+import 'features/navigation/navigation_controller.dart'; // ✅ Nouveau contrôleur V1
 
 void main() {
   runApp(const MyApp());
@@ -228,131 +229,45 @@ class _NavigationScreenState extends State<NavigationScreen> {
     }
   }
   
-  /// ÉTAPE 3: Démarrer la navigation
+  // Instance du contrôleur V1 (Singleton ou instance unique)
+  final NavigationController _navigationController = NavigationController();
+
+  /// ÉTAPE 3: Démarrer la navigation (VERSION V1 - HYBRIDE)
   Future<void> _startNavigation() async {
-    try {
-      await _speak('Recherche de l\'itinéraire en cours');
-      
-      // Obtenir la position actuelle
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-      
-      print('📍 Position: ${position.latitude}, ${position.longitude}');
-      
-      // Obtenir l'itinéraire
-      final route = await ApiService.getRoute(
-        destination: _destination!,
-        originLat: position.latitude,
-        originLng: position.longitude,
-      );
-      
-      print('📥 Réponse navigation: $route');
-      
-      if (route['success'] != true) {
-        final error = route['error'] ?? 'Impossible de trouver l\'itinéraire';
-        await _speak(error);
+    if (_destination == null) return;
+
+    setState(() {
+      _isNavigating = true;
+      _status = "Navigation Active";
+    });
+
+    // Écouter les mises à jour textuelles pour l'affichage écran
+    _navigationController.instructionStream.listen((instruction) {
+      if (mounted) {
         setState(() {
-          _destination = null;
-          _status = 'Erreur de navigation';
-        });
-        return;
-      }
-      
-      // Lire les instructions vocales
-      final voiceInstructions = route['voice_instructions'] as List?;
-      if (voiceInstructions != null && voiceInstructions.isNotEmpty) {
-        for (var instruction in voiceInstructions) {
-          await _speak(instruction.toString());
-        }
-      }
-      
-      // Lancer la boucle GPS temps réel
-      setState(() => _isNavigating = true);
-      _startGpsLoop();
-      
-    } catch (e) {
-      print('❌ Erreur startNavigation: $e');
-      await _speak('Impossible de trouver l\'itinéraire. Vérifiez votre connexion.');
-      setState(() {
-        _destination = null;
-        _status = 'Erreur';
-      });
-    }
-  }
-  
-  /// ÉTAPE 4: Boucle GPS temps réel
-  void _startGpsLoop() {
-    print('🚀 Démarrage boucle GPS');
-    
-    _gpsTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
-      try {
-        // Obtenir position GPS
-        Position position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high,
-        );
-        
-        print('📍 Position GPS: ${position.latitude}, ${position.longitude}');
-        
-        // Envoyer au backend
-        final response = await ApiService.updatePosition(
-          currentLat: position.latitude,
-          currentLng: position.longitude,
-          destination: _destination!,
-        );
-        
-        print('📥 Mise à jour position: $response');
-        
-        if (response['success'] != true) {
-          print('⚠️ Erreur mise à jour position');
-          return;
-        }
-        
-        final instruction = response['current_instruction'] ?? '';
-        final stepCompleted = response['step_completed'] ?? false;
-        final journeyCompleted = response['journey_completed'] ?? false;
-        final message = response['message'] ?? '';
-        
-        // Si nouvelle instruction (étape complétée)
-        if (stepCompleted && _currentInstruction != instruction) {
-          print('✅ Nouvelle étape: $message');
           _currentInstruction = instruction;
-          await _speak(message);
-        }
-        
-        // Si arrivé à destination
-        if (journeyCompleted) {
-          print('🎉 Destination atteinte !');
-          timer.cancel();
-          setState(() {
-            _isNavigating = false;
-            _currentInstruction = null;
-            _destination = null;
-            _status = 'Arrivé à destination';
-          });
-          await _speak('Félicitations ! Vous êtes arrivé à destination.');
-        } else {
-          setState(() => _currentInstruction = instruction);
-        }
-        
-      } catch (e) {
-        print('❌ Erreur GPS loop: $e');
+        });
       }
     });
+
+    // Lancer le contrôleur (qui gère API Mock + BLE Canne)
+    _navigationController.startNavigation(_destination!);
   }
   
   /// Arrêter la navigation
   void _stopNavigation() {
     print('🛑 Arrêt navigation');
-    _gpsTimer?.cancel();
+    _navigationController.stopNavigation();
+    
     setState(() {
       _isNavigating = false;
       _currentInstruction = null;
       _destination = null;
       _status = 'Navigation arrêtée';
     });
-    _speak('Navigation arrêtée');
   }
+  
+  // _startGpsLoop n'est plus nécessaire car NavigationController gère sa propre boucle via le BLE.
   
   @override
   Widget build(BuildContext context) {
