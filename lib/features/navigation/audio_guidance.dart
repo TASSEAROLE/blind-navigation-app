@@ -18,6 +18,7 @@ class AudioGuidance {
   Future<void> _initTts() async {
     // Définit la langue en Français.
     await flutterTts.setLanguage("fr-FR");
+    await flutterTts.awaitSpeakCompletion(true);
     
     // Définit la vitesse de parole (0.5 est une vitesse moyenne, claire et compréhensible).
     await flutterTts.setSpeechRate(0.5); 

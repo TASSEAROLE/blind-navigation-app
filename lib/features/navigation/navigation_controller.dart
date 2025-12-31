@@ -23,6 +23,7 @@ class NavigationController {
   // Stream pour mettre à jour l'UI (texte affiché)
   final StreamController<String> _instructionController = StreamController<String>.broadcast();
   Stream<String> get instructionStream => _instructionController.stream;
+  
 
   // --- MÉTHODES PUBLIQUES ---
 
@@ -88,8 +89,11 @@ class NavigationController {
       isNavigating = false;
       return;
     }
+ 
 
     await _audioGuidance.speak("Connexion à la canne en cours...");
+    await Future.delayed(const Duration(milliseconds: 800));
+ 
     // 2. Connexion au Bluetooth (Cane)
     if (!_bleService.isConnected) {
          

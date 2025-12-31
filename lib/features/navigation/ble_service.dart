@@ -10,7 +10,7 @@ class BleService {
 
   /// Nom exact du périphérique BLE broadcasté par l'ESP32.
   /// Le scan filtrera les appareils pour ne trouver que celui-ci.
-  static const String TARGET_DEVICE_NAME = "OPEN-EYES";
+  static const String TARGET_DEVICE_NAME = "OPEN EYES";
   
   /// UUID du service BLE personnalisé pour OPEN-EYES.
   /// ⚠️ IMPORTANT : Ce UUID doit être EXACTEMENT le même dans le firmware ESP32.
@@ -58,29 +58,29 @@ class BleService {
 
   /// Lance le scan et tente de se connecter automatiquement au device cible.
   Future<void> connect() async {
-    // 1. Lancer le scan BLE.
-    // timeout: 10s pour éviter de consommer la batterie indéfiniment.
-    await FlutterBluePlus.startScan(timeout: const Duration(seconds: 10));
 
-    // 2. Écouter les résultats du scan en temps réel.
     FlutterBluePlus.scanResults.listen((results) async {
-      // Pour chaque résultat trouvé...
       for (ScanResult r in results) {
-        // On vérifie si le nom correspond à notre canne "OPEN-EYES-ESP32".
-        // Note: platformName gère les différences iOS/Android de nommage.
-        if (r.device.platformName == TARGET_DEVICE_NAME) {
-          // 3. Si trouvé, on arrête immédiatement le scan (bonne pratique).
+
+        final name = r.advertisementData.localName;
+        if (name.isEmpty) continue;
+
+        print("🔍 Trouvé : $name");
+
+        if (name == TARGET_DEVICE_NAME) {
+          print("✅ OPEN-EYES détecté !");
           await FlutterBluePlus.stopScan();
-          
-          // 4. On lance la procédure de connexion à cet appareil.
-          _connectToDevice(r.device);
-          
-          // On sort de la boucle car on a trouvé notre cible.
-          break;
+          await _connectToDevice(r.device);
+          return;
         }
       }
     });
-  }
+
+    await FlutterBluePlus.startScan(
+      timeout: const Duration(seconds: 15),
+    );
+}
+
 
   /// Gère la connexion technique et la découverte des services UART/Custom.
   Future<void> _connectToDevice(BluetoothDevice device) async {
