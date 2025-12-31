@@ -52,22 +52,35 @@ class NavigationController {
       // Parsing des Waypoints (Format attendu: 'waypoints': [{'lat':.., 'lng':.., 'instruction':..}, ...])
       // Si le backend renvoie juste 'voice_instructions', on devra adapter.
       // Hypothèse: le backend a été mis à jour pour renvoyer 'waypoints'.
-      if (response['waypoints'] != null) {
-        List<dynamic> wpList = response['waypoints'];
-        List<Waypoint> route = wpList.map((wp) => Waypoint(
-          lat: (wp['lat'] as num).toDouble(),
-          lon: (wp['lng'] as num).toDouble(),
-          instruction: wp['instruction'] ?? "",
-        )).toList();
-        
+      if (response['route'] != null && response['route']['steps'] != null) {
+        List<dynamic> steps = response['route']['steps'];
+
+        List<Waypoint> route = steps.map((step) {
+          return Waypoint(
+            lat: (step['start_location']['lat'] as num).toDouble(),
+            lon: (step['start_location']['lng'] as num).toDouble(),
+            instruction: step['instruction'] ?? "",
+          );
+        }).toList();
+
+        // Ajouter le dernier point (destination)
+        if (steps.isNotEmpty) {
+          var last = steps.last['end_location'];
+          route.add(Waypoint(
+            lat: (last['lat'] as num).toDouble(),
+            lon: (last['lng'] as num).toDouble(),
+            instruction: "Vous êtes arrivé à destination",
+          ));
+        }
+
         _routeManager.setRoute(route);
-        await _audioGuidance.speak("Itinéraire trouvé avec ${route.length} étapes.");
-      } else {
-        // Fallback si pas de waypoints strcuturés (ancien backend?)
-         print("BLE isConnected BEFORE = : ${_bleService.isConnected}");
-    
-         await _audioGuidance.speak("Attention, pas de détails GPS précis reçus du serveur.");
-      }
+        await _audioGuidance.speak(
+            "Itinéraire chargé avec ${route.length} points.");
+        } else {
+          await _audioGuidance.speak(
+              "Itinéraire reçu mais sans étapes exploitables.");
+        }
+
 
     } catch (e) {
       print("Erreur Backend: $e");
