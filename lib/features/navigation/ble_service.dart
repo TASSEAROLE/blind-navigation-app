@@ -10,7 +10,7 @@ class BleService {
 
   /// Nom exact du périphérique BLE broadcasté par l'ESP32.
   /// Le scan filtrera les appareils pour ne trouver que celui-ci.
-  static const String TARGET_DEVICE_NAME = "OPEN-EYES-ESP32";
+  static const String TARGET_DEVICE_NAME = "OPEN-EYES";
   
   /// UUID du service BLE personnalisé pour OPEN-EYES.
   /// ⚠️ IMPORTANT : Ce UUID doit être EXACTEMENT le même dans le firmware ESP32.
@@ -269,6 +269,9 @@ class BleService {
   void dispose() {
     // Déconnexion propre du device.
     _connectedDevice?.disconnect();
+    _connectedDevice = null;
+
+
     
     // Fermeture du StreamController.
     _sensorDataController.close();

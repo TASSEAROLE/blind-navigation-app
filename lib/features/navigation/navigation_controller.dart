@@ -64,6 +64,8 @@ class NavigationController {
         await _audioGuidance.speak("Itinéraire trouvé avec ${route.length} étapes.");
       } else {
         // Fallback si pas de waypoints strcuturés (ancien backend?)
+         print("BLE isConnected BEFORE = : ${_bleService.isConnected}");
+    
          await _audioGuidance.speak("Attention, pas de détails GPS précis reçus du serveur.");
       }
 
@@ -73,10 +75,11 @@ class NavigationController {
       isNavigating = false;
       return;
     }
-    
+
+    await _audioGuidance.speak("Connexion à la canne en cours...");
     // 2. Connexion au Bluetooth (Cane)
     if (!_bleService.isConnected) {
-         await _audioGuidance.speak("Connexion à la canne en cours...");
+         
         await _bleService.connect();
     }
     

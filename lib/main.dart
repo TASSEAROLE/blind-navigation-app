@@ -10,6 +10,7 @@ import 'services/api_service.dart';
 import 'features/navigation/navigation_controller.dart'; // ✅ Nouveau contrôleur V1
 
 void main() {
+  print('🚀 Démarrage de l\'application Blind Navigation');
   runApp(const MyApp());
 }
 

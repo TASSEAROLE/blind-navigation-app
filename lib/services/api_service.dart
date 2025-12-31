@@ -6,7 +6,7 @@ import 'package:http_parser/http_parser.dart';
 class ApiService {
   // ⚠️ IMPORTANT: Pour émulateur Android, utilise http://10.0.2.2:8000
   // Pour téléphone physique sur même WiFi, utilise l'IP de ton PC (ex: http://192.168.1.10:8000)
-  static const String baseUrl = 'http://10.2.6.211:8000';
+  static const String baseUrl = 'http://10.2.6.181:8000';
   
   /// Transcrit un fichier audio en texte et extrait la destination
   static Future<Map<String, dynamic>> transcribeAudio(String audioPath) async {
