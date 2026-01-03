@@ -165,91 +165,168 @@ class BleService {
   
   /// Callback appelé quand des données GPS arrivent.
   /// Format ESP32 : {"latitude": 12.34, "longitude": 56.78, ...}
-  void _onGpsData(List<int> bytes) {
-    try {
-      String jsonString = utf8.decode(bytes);
-      Map<String, dynamic> json = jsonDecode(jsonString);
+//   void _onGpsData(List<int> bytes) {
+//     try {
+//       String jsonString = utf8.decode(bytes);
+//       Map<String, dynamic> json = jsonDecode(jsonString);
       
-      _latestLat = (json['latitude'] as num?)?.toDouble() ?? _latestLat;
-      _latestLon = (json['longitude'] as num?)?.toDouble() ?? _latestLon;
+//       _latestLat = (json['latitude'] as num?)?.toDouble() ?? _latestLat;
+//       _latestLon = (json['longitude'] as num?)?.toDouble() ?? _latestLon;
       
-      // Après chaque mise à jour, on émet les données fusionnées.
-      _emitSensorData();
-    } catch (e) {
-      print("Erreur parsing GPS: $e");
-    }
-  }
+//       // Après chaque mise à jour, on émet les données fusionnées.
+//       _emitSensorData();
+//     } catch (e) {
+//       print("Erreur parsing GPS: $e");
+//     }
+//   }
   
-  /// Callback appelé quand des données du capteur d'eau arrivent.
-  /// Format ESP32 : {"humidityLevel": 45.5, "rawData": 1024}
-  void _onWaterData(List<int> bytes) {
-    try {
-      String jsonString = utf8.decode(bytes);
-      Map<String, dynamic> json = jsonDecode(jsonString);
+//   /// Callback appelé quand des données du capteur d'eau arrivent.
+//   /// Format ESP32 : {"humidityLevel": 45.5, "rawData": 1024}
+//   void _onWaterData(List<int> bytes) {
+//     try {
+//       String jsonString = utf8.decode(bytes);
+//       Map<String, dynamic> json = jsonDecode(jsonString);
       
-      // Interprétation : si humidité > 30% (seuil arbitraire à ajuster), on considère qu'Il y a de l'eau
-      double level = (json['humidityLevel'] as num?)?.toDouble() ?? 0.0;
-      _latestWater = level > 30.0;
+//       // Interprétation : si humidité > 30% (seuil arbitraire à ajuster), on considère qu'Il y a de l'eau
+//       double level = (json['humidityLevel'] as num?)?.toDouble() ?? 0.0;
+//       _latestWater = level > 30.0;
       
-      _emitSensorData();
-    } catch (e) {
-      print("Erreur parsing Water: $e");
-    }
-  }
+//       _emitSensorData();
+//     } catch (e) {
+//       print("Erreur parsing Water: $e");
+//     }
+//   }
   
-  /// Callback appelé quand des données d'obstacles arrivent.
-  /// Format ESP32 : {"upper": 120, "lower": 50, "servoAngle": 90}
-  /// Note: Les capteurs renvoient des cm. On convertit en mètres.
-  /// Callback appelé quand des données d'obstacles arrivent.
-  /// Format ESP32 : {"upper": 120, "lower": 50, "servoAngle": 90}
-  /// Note: Les capteurs renvoient des cm. On convertit en mètres.
-  void _onObstacleData(List<int> bytes) {
-    try {
-      String jsonString = utf8.decode(bytes);
-      Map<String, dynamic> json = jsonDecode(jsonString);
+//   /// Callback appelé quand des données d'obstacles arrivent.
+//   /// Format ESP32 : {"upper": 120, "lower": 50, "servoAngle": 90}
+//   /// Note: Les capteurs renvoient des cm. On convertit en mètres.
+//   /// Callback appelé quand des données d'obstacles arrivent.
+//   /// Format ESP32 : {"upper": 120, "lower": 50, "servoAngle": 90}
+//   /// Note: Les capteurs renvoient des cm. On convertit en mètres.
+//   void _onObstacleData(List<int> bytes) {
+//     try {
+//       String jsonString = utf8.decode(bytes);
+//       Map<String, dynamic> json = jsonDecode(jsonString);
       
-      double lowerCm = (json['lower'] as num?)?.toDouble() ?? 9999.0;
-      double upperCm = (json['upper'] as num?)?.toDouble() ?? 9999.0;
-      double angle = (json['servoAngle'] as num?)?.toDouble() ?? 90.0;
+//       double lowerCm = (json['lower'] as num?)?.toDouble() ?? 9999.0;
+//       double upperCm = (json['upper'] as num?)?.toDouble() ?? 9999.0;
+//       double angle = (json['servoAngle'] as num?)?.toDouble() ?? 90.0;
       
-      double distMeters = lowerCm / 100.0; // Conversion cm -> m
-      _latestObstacleUp = upperCm / 100.0;
+//       double distMeters = lowerCm / 100.0; // Conversion cm -> m
+//       _latestObstacleUp = upperCm / 100.0;
       
-      // Catégorisation par secteur (mapping Servo)
-      // < 60° : GAUCHE (selon ObstacleDetector.cpp : angleActuel < 60 ? "GAUCHE")
-      // > 120° : DROITE (selon ObstacleDetector.cpp : angleActuel > 120 ? "DROITE")
-      // Sinon : CENTRE
+//       // Catégorisation par secteur (mapping Servo)
+//       // < 60° : GAUCHE (selon ObstacleDetector.cpp : angleActuel < 60 ? "GAUCHE")
+//       // > 120° : DROITE (selon ObstacleDetector.cpp : angleActuel > 120 ? "DROITE")
+//       // Sinon : CENTRE
       
-      if (angle < 60) {
-        _latestDistLeft = distMeters;
-      } else if (angle > 120) {
-        _latestDistRight = distMeters;
-      } else {
-        _latestDistCenter = distMeters;
-      }
+//       if (angle < 60) {
+//         _latestDistLeft = distMeters;
+//       } else if (angle > 120) {
+//         _latestDistRight = distMeters;
+//       } else {
+//         _latestDistCenter = distMeters;
+//       }
       
-      _emitSensorData();
-    } catch (e) {
-      print("Erreur parsing Obstacle: $e");
-    }
-  }
+//       _emitSensorData();
+//     } catch (e) {
+//       print("Erreur parsing Obstacle: $e");
+//     }
+//   }
   
-  /// Callback appelé quand des données IMU arrivent.
-  /// Format ESP32 : {"yaw": 10.5, "pitch": 5.0, "roll": 2.0}
-  void _onImuData(List<int> bytes) {
-    try {
-      String jsonString = utf8.decode(bytes);
-      Map<String, dynamic> json = jsonDecode(jsonString);
+//   /// Callback appelé quand des données IMU arrivent.
+//   /// Format ESP32 : {"yaw": 10.5, "pitch": 5.0, "roll": 2.0}
+//   void _onImuData(List<int> bytes) {
+//     try {
+//       String jsonString = utf8.decode(bytes);
+//       Map<String, dynamic> json = jsonDecode(jsonString);
       
-      _latestHeading = (json['yaw'] as num?)?.toDouble() ?? _latestHeading;
+//       _latestHeading = (json['yaw'] as num?)?.toDouble() ?? _latestHeading;
       
-      _emitSensorData();
-    } catch (e) {
-      print("Erreur parsing IMU: $e");
-    }
-  }
+//       _emitSensorData();
+//     } catch (e) {
+//       print("Erreur parsing IMU: $e");
+//     }
+//   }
   
-  /// Émet un objet SensorData complet en fusionnant toutes les dernières valeurs.
+  
+// Helper utilitaire pour parser JSON de façon sûre
+Map<String, dynamic>? safeJsonDecode(List<int> bytes, String label) {
+  if (bytes.isEmpty) {
+    print("⚠️ $label: données vides reçues");
+    return null;
+  }
+
+  try {
+    String jsonString = utf8.decode(bytes);
+    print("📡 $label: reçu -> $jsonString"); // debug
+    if (jsonString.isEmpty) {
+      print("⚠️ $label: chaîne JSON vide reçue");
+      return null;
+    }
+    return jsonDecode(jsonString) as Map<String, dynamic>;
+  } catch (e) {
+    print("❌ $label: erreur parsing JSON -> $e");
+    return null;
+  }
+}
+
+/// Callback GPS
+void _onGpsData(List<int> bytes) {
+  final json = safeJsonDecode(bytes, "GPS");
+  if (json == null) return;
+
+  _latestLat = (json['latitude'] as num?)?.toDouble() ?? _latestLat;
+  _latestLon = (json['longitude'] as num?)?.toDouble() ?? _latestLon;
+
+  _emitSensorData();
+}
+
+/// Callback capteur d'eau
+void _onWaterData(List<int> bytes) {
+  final json = safeJsonDecode(bytes, "Water");
+  if (json == null) return;
+
+  double level = (json['humidityLevel'] as num?)?.toDouble() ?? 0.0;
+  _latestWater = level > 30.0; // seuil arbitraire
+
+  _emitSensorData();
+}
+
+/// Callback obstacles
+void _onObstacleData(List<int> bytes) {
+  final json = safeJsonDecode(bytes, "Obstacle");
+  if (json == null) return;
+
+  double lowerCm = (json['lower'] as num?)?.toDouble() ?? 9999.0;
+  double upperCm = (json['upper'] as num?)?.toDouble() ?? 9999.0;
+  double angle = (json['servoAngle'] as num?)?.toDouble() ?? 90.0;
+
+  double distMeters = lowerCm / 100.0; 
+  _latestObstacleUp = upperCm / 100.0;
+
+  if (angle < 60) {
+    _latestDistLeft = distMeters;
+  } else if (angle > 120) {
+    _latestDistRight = distMeters;
+  } else {
+    _latestDistCenter = distMeters;
+  }
+
+  _emitSensorData();
+}
+
+/// Callback IMU
+void _onImuData(List<int> bytes) {
+  final json = safeJsonDecode(bytes, "IMU");
+  if (json == null) return;
+
+  _latestHeading = (json['yaw'] as num?)?.toDouble() ?? _latestHeading;
+
+  _emitSensorData();
+}
+
+/// Émet un objet SensorData complet en fusionnant toutes les dernières valeurs.
   void _emitSensorData() {
     SensorData data = SensorData(
       lat: _latestLat,
@@ -277,3 +354,4 @@ class BleService {
     _sensorDataController.close();
   }
 }
+
