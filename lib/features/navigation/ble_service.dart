@@ -352,10 +352,10 @@ void _onImuData(List<int> bytes) {
 
   final yaw = (json['yaw'] as num?)?.toDouble();
   final pitch = (json['pitch'] as num?)?.toDouble();
-  final raw = (json['raw'] as num?)?.toDouble();
+  final roll = (json['roll'] as num?)?.toDouble();
 
   // log pour debug
-  print("📡 IMU: yaw=$yaw, pitch=$pitch, raw=$raw");
+  print("📡 IMU: yaw=$yaw, pitch=$pitch, roll=$roll");
 
   // mets à jour tes variables locales si nécessaire
   if (yaw != null) _latestHeading = yaw;
