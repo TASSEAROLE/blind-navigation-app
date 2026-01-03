@@ -54,6 +54,16 @@ class BleService {
   double _latestObstacleUp = 99.9;
   bool _latestWater = false;
 
+  double _latestAltitude = 0.0;
+  double _latestSpeed = 0.0;
+  double _latestGpsHeading = 0.0;
+  int _latestSatelliteCount = 0;
+  double _latestHdop = 99.9;
+  bool _latestGpsValid = false;
+  String _latestFixType = "none";
+  int _latestGpsTimestamp = 0;
+
+
   // --- MÉTHODES ---
 
   /// Lance le scan et tente de se connecter automatiquement au device cible.
@@ -271,16 +281,35 @@ Map<String, dynamic>? safeJsonDecode(List<int> bytes, String label) {
   }
 }
 
-/// Callback GPS
 void _onGpsData(List<int> bytes) {
   final json = safeJsonDecode(bytes, "GPS");
   if (json == null) return;
 
+  print("📡 GPS RAW REÇU -> $json");
+
   _latestLat = (json['latitude'] as num?)?.toDouble() ?? _latestLat;
   _latestLon = (json['longitude'] as num?)?.toDouble() ?? _latestLon;
+  _latestAltitude = (json['altitude'] as num?)?.toDouble() ?? _latestAltitude;
+  _latestSpeed = (json['speed'] as num?)?.toDouble() ?? _latestSpeed;
+  _latestGpsHeading = (json['heading'] as num?)?.toDouble() ?? _latestGpsHeading;
+  _latestSatelliteCount = (json['satellite_count'] as num?)?.toInt() ?? _latestSatelliteCount;
+  _latestHdop = (json['hdop'] as num?)?.toDouble() ?? _latestHdop;
+  _latestGpsValid = (json['isValid'] as bool?) ?? _latestGpsValid;
+  _latestFixType = (json['fixType'] as String?) ?? _latestFixType;
+  _latestGpsTimestamp = (json['gpsTimestamp'] as num?)?.toInt() ?? _latestGpsTimestamp;
+
+  print(
+    "📍 GPS -> lat=$_latestLat lon=$_latestLon "
+    "speed=$_latestSpeed m/s "
+    "sat=$_latestSatelliteCount "
+    "hdop=$_latestHdop "
+    "valid=$_latestGpsValid "
+    "fix=$_latestFixType"
+  );
 
   _emitSensorData();
 }
+
 
 /// Callback capteur d'eau
 void _onWaterData(List<int> bytes) {
@@ -288,7 +317,7 @@ void _onWaterData(List<int> bytes) {
   if (json == null) return;
 
   double level = (json['humidityLevel'] as num?)?.toDouble() ?? 0.0;
-  _latestWater = level > 30.0; // seuil arbitraire
+  _latestWater = level < 4.0; // seuil arbitraire
 
   _emitSensorData();
 }
@@ -321,26 +350,53 @@ void _onImuData(List<int> bytes) {
   final json = safeJsonDecode(bytes, "IMU");
   if (json == null) return;
 
-  _latestHeading = (json['yaw'] as num?)?.toDouble() ?? _latestHeading;
+  final yaw = (json['yaw'] as num?)?.toDouble();
+  final pitch = (json['pitch'] as num?)?.toDouble();
+  final raw = (json['raw'] as num?)?.toDouble();
+
+  // log pour debug
+  print("📡 IMU: yaw=$yaw, pitch=$pitch, raw=$raw");
+
+  // mets à jour tes variables locales si nécessaire
+  if (yaw != null) _latestHeading = yaw;
+  // tu peux ajouter _latestPitch = pitch etc si tu veux stocker
 
   _emitSensorData();
 }
 
+
 /// Émet un objet SensorData complet en fusionnant toutes les dernières valeurs.
   void _emitSensorData() {
-    SensorData data = SensorData(
-      lat: _latestLat,
-      lon: _latestLon,
-      heading: _latestHeading,
-      frontDistance: _latestDistCenter, // Le "Centre" est considéré comme le front principal
-      leftDistance: _latestDistLeft,
-      rightDistance: _latestDistRight,
-      obstacleUp: _latestObstacleUp,
-      water: _latestWater,
-    );
-    
-    _sensorDataController.add(data);
-  }
+
+  // Choix intelligent du heading
+  final double effectiveHeading =
+      (_latestGpsValid && _latestSpeed > 0.5)
+          ? _latestGpsHeading     // direction réelle
+          : _latestHeading;       // orientation IMU
+
+  final SensorData data = SensorData(
+    lat: _latestLat,
+    lon: _latestLon,
+    heading: effectiveHeading,
+    frontDistance: _latestDistCenter,
+    leftDistance: _latestDistLeft,
+    rightDistance: _latestDistRight,
+    obstacleUp: _latestObstacleUp,
+    water: _latestWater,
+  );
+
+  // DEBUG (important pour toi maintenant)
+  print(
+    "📦 SENSOR DATA → "
+    "lat=${data.lat}, lon=${data.lon}, "
+    "heading=${data.heading}, "
+    "speed=$_latestSpeed, "
+    "gpsValid=$_latestGpsValid, "
+    "water=${data.water}"
+  );
+
+  _sensorDataController.add(data);
+}
 
   /// Nettoyage des ressources lors de la fermeture du service.
   void dispose() {
