@@ -3,13 +3,38 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 
+class ApiException implements Exception {
+  final String message;
+  final int? statusCode;
+
+  ApiException(this.message, [this.statusCode]);
+
+  @override
+  String toString() => 'ApiException: $message (Status: $statusCode)';
+}
+
 class ApiService {
-  // ⚠️ IMPORTANT: Pour émulateur Android, utilise http://10.0.2.2:8000
-  // Pour téléphone physique sur même WiFi, utilise l'IP de ton PC (ex: http://192.168.1.10:8000)
-  static const String baseUrl = 'http://10.2.6.211:8000';
-  
+  final String baseUrl;
+  final http.Client _client;
+  final Duration timeout;
+
+  ApiService({
+    required this.baseUrl,
+    http.Client? client,
+    this.timeout = const Duration(seconds: 10),
+  }) : _client = client ?? http.Client();
+
+  /// Helper pour gérer les réponses
+  dynamic _processResponse(http.Response response) {
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return json.decode(response.body);
+    } else {
+      throw ApiException('Erreur serveur', response.statusCode);
+    }
+  }
+
   /// Transcrit un fichier audio en texte et extrait la destination
-  static Future<Map<String, dynamic>> transcribeAudio(String audioPath) async {
+  Future<Map<String, dynamic>> transcribeAudio(String audioPath) async {
     try {
       var request = http.MultipartRequest(
         'POST',
@@ -18,29 +43,29 @@ class ApiService {
       
       // Ajouter le fichier audio
       request.files.add(
-       await http.MultipartFile.fromPath(
-       'audio', 
-       audioPath,
-      contentType: MediaType('audio', 'wav'),  // ✅ AJOUTÉ
-       ),
+        await http.MultipartFile.fromPath(
+          'audio', 
+          audioPath,
+          contentType: MediaType('audio', 'wav'),
+        ),
       );
       
-      var streamedResponse = await request.send();
+      var streamedResponse = await _client.send(request).timeout(timeout);
       var response = await http.Response.fromStream(streamedResponse);
       
-      if (response.statusCode == 200) {
-        return json.decode(response.body);
-      } else {
-        throw Exception('Erreur transcription: ${response.statusCode}');
-      }
+      return _processResponse(response);
+    } on SocketException {
+      throw ApiException('Pas de connexion internet');
+    } on TimeoutException {
+      throw ApiException('Le serveur ne répond pas (Timeout)');
     } catch (e) {
-      print('❌ Erreur transcribeAudio: $e');
-      rethrow;
+      if (e is ApiException) rethrow;
+      throw ApiException('Erreur inattendue: $e');
     }
   }
   
   /// Confirme si l'utilisateur dit "Oui" ou "Non"
-  static Future<Map<String, dynamic>> confirmDestination(String audioPath) async {
+  Future<Map<String, dynamic>> confirmDestination(String audioPath) async {
     try {
       var request = http.MultipartRequest(
         'POST',
@@ -49,33 +74,34 @@ class ApiService {
       
       request.files.add(
         await http.MultipartFile.fromPath(
-        'audio', 
-        audioPath,
-        contentType: MediaType('audio', 'wav'),  // ✅ AJOUTÉ
+          'audio', 
+          audioPath,
+          contentType: MediaType('audio', 'wav'),
         ),
       );
-      var streamedResponse = await request.send();
+      
+      var streamedResponse = await _client.send(request).timeout(timeout);
       var response = await http.Response.fromStream(streamedResponse);
       
-      if (response.statusCode == 200) {
-        return json.decode(response.body);
-      } else {
-        throw Exception('Erreur confirmation: ${response.statusCode}');
-      }
+      return _processResponse(response);
+    } on SocketException {
+      throw ApiException('Pas de connexion internet');
+    } on TimeoutException {
+      throw ApiException('Le serveur ne répond pas (Timeout)');
     } catch (e) {
-      print('❌ Erreur confirmDestination: $e');
-      rethrow;
+      if (e is ApiException) rethrow;
+      throw ApiException('Erreur inattendue: $e');
     }
   }
   
   /// Obtient l'itinéraire depuis une destination textuelle
-  static Future<Map<String, dynamic>> getRoute({
+  Future<Map<String, dynamic>> getRoute({
     required String destination,
     required double originLat,
     required double originLng,
   }) async {
     try {
-      var response = await http.post(
+      var response = await _client.post(
         Uri.parse('$baseUrl/navigation/get-route'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
@@ -83,27 +109,27 @@ class ApiService {
           'origin_lat': originLat,
           'origin_lng': originLng,
         }),
-      );
+      ).timeout(timeout);
       
-      if (response.statusCode == 200) {
-        return json.decode(response.body);
-      } else {
-        throw Exception('Erreur itinéraire: ${response.statusCode}');
-      }
+      return _processResponse(response);
+    } on SocketException {
+      throw ApiException('Pas de connexion internet');
+    } on TimeoutException {
+      throw ApiException('Le serveur ne répond pas (Timeout)');
     } catch (e) {
-      print('❌ Erreur getRoute: $e');
-      rethrow;
+      if (e is ApiException) rethrow;
+      throw ApiException('Erreur inattendue: $e');
     }
   }
   
   /// Met à jour la position GPS en temps réel
-  static Future<Map<String, dynamic>> updatePosition({
+  Future<Map<String, dynamic>> updatePosition({
     required double currentLat,
     required double currentLng,
     required String destination,
   }) async {
     try {
-      var response = await http.post(
+      var response = await _client.post(
         Uri.parse('$baseUrl/navigation/update-position'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
@@ -111,16 +137,20 @@ class ApiService {
           'current_lng': currentLng,
           'destination': destination,
         }),
-      );
+      ).timeout(timeout);
       
-      if (response.statusCode == 200) {
-        return json.decode(response.body);
-      } else {
-        throw Exception('Erreur position: ${response.statusCode}');
-      }
+      return _processResponse(response);
+    } on SocketException {
+      throw ApiException('Pas de connexion internet');
+    } on TimeoutException {
+      throw ApiException('Le serveur ne répond pas (Timeout)');
     } catch (e) {
-      print('❌ Erreur updatePosition: $e');
-      rethrow;
+      if (e is ApiException) rethrow;
+      throw ApiException('Erreur inattendue: $e');
     }
+  }
+
+  void dispose() {
+    _client.close();
   }
 }
